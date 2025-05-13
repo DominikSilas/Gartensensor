@@ -39,29 +39,44 @@ public:
         instance = this;
     }
 
-    void connectWiFi() {
+    bool connectWiFi() {
         WiFi.begin(ssid, password);
-        while (WiFi.status() != WL_CONNECTED) {
+        int versuche = 0;
+        while (WiFi.status() != WL_CONNECTED && versuche < 20) {
             delay(500);
             Serial.print(".");
+            versuche++;
         }
-        Serial.println("WLAN verbunden!");
+        if (WiFi.status() == WL_CONNECTED) {
+            Serial.println("WLAN verbunden!");
+            return true;
+        } else {
+            Serial.println("WLAN-Verbindung fehlgeschlagen!");
+            return false;
+        }
     }
 
-    void setupMQTT() {
+    bool setupMQTT() {
         mqttClient.setServer(broker, port);
         mqttClient.setCallback(callbackWrapper);
-        while (!mqttClient.connected()) {
+
+        int versuche = 0;
+        while (!mqttClient.connected() && versuche < 5) {
             Serial.print("Verbinde mit MQTT...");
             if (mqttClient.connect("ArduinoClient")) {
                 Serial.println(" verbunden.");
-                mqttClient.subscribe("relais/steuerung"); // z. B. zum Empfangen von Befehlen
+                mqttClient.subscribe("relais/steuerung");
+                return true;
             } else {
                 Serial.print(" Fehler, rc=");
-                Serial.print(mqttClient.state());
+                Serial.println(mqttClient.state());
                 delay(2000);
+                versuche++;
             }
         }
+
+        Serial.println("MQTT-Verbindung fehlgeschlagen!");
+        return false;
     }
 
     void publish(const char* topic, const String& payload) {

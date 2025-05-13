@@ -14,45 +14,64 @@ MqttClientWrapper mqtt("DLProduktion", "Holzbalken8214", "192.168.1.117");
 bool relaisManuell = false;
 bool relaisZustand = false;
 
-//void mqttNachricht(String topic, String payload) {
- //   if (topic == "relais/steuerung") {
- //       if (payload == "AN") {
-  //          relaisZustand = true;
-  //          relaisManuell = true;
-    //    } else if (payload == "AUS") {
-      //      relaisZustand = false;
-        //    relaisManuell = true;
-//        } else if (payload == "AUTO") {
-//            relaisManuell = false;
-//        }
-//    }
-//}
+void mqttNachricht(String topic, String payload) {
+    if (topic == "relais/steuerung") {
+        if (payload == "AN") {
+            relaisZustand = true;
+            relaisManuell = true;
+        } else if (payload == "AUS") {
+            relaisZustand = false;
+            relaisManuell = true;
+        } else if (payload == "AUTO") {
+            relaisManuell = false;
+        }
+    }
+}
 
 void setup() {
     Serial.begin(9600);
-    carrier.display.fillScreen(ST77XX_BLUE);
-    delay(1000);
-//    mqtt.connectWiFi();
-//    mqtt.setupMQTT();
-//    mqtt.setCallback(mqttNachricht);
-
     CARRIER_CASE = true;
 
     carrier.begin();
     carrier.display.begin();
 
-    anzeige.initAnzeige();
-
-        carrier.Relay1.open(); // Startzustand
-        carrier.display.setRotation(0);         // Teste andere Werte bei Bedarf
-        carrier.display.fillScreen(ST77XX_BLACK);
-        carrier.display.setTextSize(3);
-        carrier.display.setTextColor(ST77XX_RED); // Knallige Farbe
-        carrier.display.setCursor(0, 90);         // Sichere Position
-        carrier.display.println("System Start");
+    carrier.display.setRotation(0);         // Teste andere Werte bei Bedarf
+    carrier.display.fillScreen(ST77XX_BLACK);
+    carrier.display.setTextSize(3);
+    carrier.display.setTextColor(ST77XX_RED); // Knallige Farbe
+    carrier.display.setCursor(0, 90);         // Sichere Position
+    carrier.display.println("System Start");
 
     delay(2000);
-        carrier.display.fillScreen(ST77XX_BLACK);
+    carrier.display.fillScreen(ST77XX_BLACK);
+    carrier.display.setCursor(10, 40);
+    carrier.display.print("WLAN: ");
+    if (mqtt.connectWiFi()) {
+        carrier.display.println("OK");
+    } else {
+        carrier.display.println("FEHLER");
+        while (true); // Stoppe bei Fehler
+    }
+
+    // MQTT verbinden + Anzeige
+    carrier.display.setCursor(10, 70);
+    carrier.display.print("MQTT: ");
+    if (mqtt.setupMQTT()) {
+        carrier.display.println("OK");
+    } else {
+        carrier.display.println("FEHLER");
+        while (true); // Stoppe bei Fehler
+    }
+
+    mqtt.setCallback(mqttNachricht);
+
+    carrier.display.setCursor(10, 100);
+    carrier.display.println("Initialisiere...");
+    delay(1000);
+    carrier.display.fillScreen(ST77XX_BLACK);
+
+    anzeige.initAnzeige();
+    carrier.Relay1.open(); // Startzustand
 }
 
 void loop() {
@@ -74,9 +93,9 @@ void loop() {
     anzeige.zeichne(sensorWert, relaisZustand);
 
     // MQTT senden
-//    String payload = String("{\"feuchte\":") + sensorWert + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
-//    mqtt.publish("sensor/feuchte", payload);
+    String payload = String("{\"feuchte\":") + sensorWert + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
+    mqtt.publish("sensor/feuchte", payload);
 
-//    mqtt.loop();  // nicht vergessen
-//    delay(1000);
+    mqtt.loop();  // nicht vergessen
+    delay(1000);
 }
