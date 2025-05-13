@@ -14,26 +14,27 @@ MqttClientWrapper mqtt("DLProduktion", "Holzbalken8214", "192.168.1.117");
 bool relaisManuell = false;
 bool relaisZustand = false;
 
-void mqttNachricht(String topic, String payload) {
-    if (topic == "relais/steuerung") {
-        if (payload == "AN") {
-            relaisZustand = true;
-            relaisManuell = true;
-        } else if (payload == "AUS") {
-            relaisZustand = false;
-            relaisManuell = true;
-        } else if (payload == "AUTO") {
-            relaisManuell = false;
-        }
-    }
-}
+//void mqttNachricht(String topic, String payload) {
+ //   if (topic == "relais/steuerung") {
+ //       if (payload == "AN") {
+  //          relaisZustand = true;
+  //          relaisManuell = true;
+    //    } else if (payload == "AUS") {
+      //      relaisZustand = false;
+        //    relaisManuell = true;
+//        } else if (payload == "AUTO") {
+//            relaisManuell = false;
+//        }
+//    }
+//}
 
 void setup() {
     Serial.begin(9600);
-
-    mqtt.connectWiFi();
-    mqtt.setupMQTT();
-    mqtt.setCallback(mqttNachricht);
+    carrier.display.fillScreen(ST77XX_BLUE);
+    delay(1000);
+//    mqtt.connectWiFi();
+//    mqtt.setupMQTT();
+//    mqtt.setCallback(mqttNachricht);
 
     CARRIER_CASE = true;
 
@@ -73,9 +74,9 @@ void loop() {
     anzeige.zeichne(sensorWert, relaisZustand);
 
     // MQTT senden
-    String payload = String("{\"feuchte\":") + sensorWert + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
-    mqtt.publish("sensor/feuchte", payload);
+//    String payload = String("{\"feuchte\":") + sensorWert + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
+//    mqtt.publish("sensor/feuchte", payload);
 
-    mqtt.loop();  // ❗ nicht vergessen
-    delay(1000);
+//    mqtt.loop();  // nicht vergessen
+//    delay(1000);
 }
