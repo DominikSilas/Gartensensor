@@ -1,0 +1,82 @@
+//
+// Created by domin on 12.05.2025.
+//
+
+#ifndef CODE_MQTTCLIENTWRAPPER_HPP
+#define CODE_MQTTCLIENTWRAPPER_HPP
+
+#include <WiFiNINA.h>
+#include <PubSubClient.h>
+#include <functional>
+
+class MqttClientWrapper {
+private:
+    const char* ssid;
+    const char* password;
+    const char* broker;
+    int port;
+    WiFiClient wifiClient;
+    PubSubClient mqttClient;
+
+    std::function<void(String, String)> onMessageCallback;
+
+    static void callbackWrapper(char* topic, byte* payload, unsigned int length) {
+        if (instance && instance->onMessageCallback) {
+            String t = topic;
+            String p;
+            for (unsigned int i = 0; i < length; i++) {
+                p += (char)payload[i];
+            }
+            instance->onMessageCallback(t, p);
+        }
+    }
+
+    static MqttClientWrapper* instance;
+
+public:
+    MqttClientWrapper(const char* ssid, const char* password, const char* broker, int port = 1883)
+            : ssid(ssid), password(password), broker(broker), port(port), mqttClient(wifiClient) {
+        instance = this;
+    }
+
+    void connectWiFi() {
+        WiFi.begin(ssid, password);
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(500);
+            Serial.print(".");
+        }
+        Serial.println("WLAN verbunden!");
+    }
+
+    void setupMQTT() {
+        mqttClient.setServer(broker, port);
+        mqttClient.setCallback(callbackWrapper);
+        while (!mqttClient.connected()) {
+            Serial.print("Verbinde mit MQTT...");
+            if (mqttClient.connect("ArduinoClient")) {
+                Serial.println(" verbunden.");
+                mqttClient.subscribe("relais/steuerung"); // z. B. zum Empfangen von Befehlen
+            } else {
+                Serial.print(" Fehler, rc=");
+                Serial.print(mqttClient.state());
+                delay(2000);
+            }
+        }
+    }
+
+    void publish(const char* topic, const String& payload) {
+        mqttClient.publish(topic, payload.c_str());
+    }
+
+    void setCallback(std::function<void(String, String)> callback) {
+        onMessageCallback = callback;
+    }
+
+    void loop() {
+        mqttClient.loop();
+    }
+};
+
+
+
+#endif //CODE_MQTTCLIENTWRAPPER_HPP
