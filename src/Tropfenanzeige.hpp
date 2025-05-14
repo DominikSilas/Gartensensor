@@ -17,7 +17,7 @@ public:
     : carrier(carrierRef) {}
 
     void initAnzeige() {
-        zeichneRahmen(); // Nur einmal beim Start
+
     }
 
     void zeichne(int feuchtigkeit, bool relaisAn) {

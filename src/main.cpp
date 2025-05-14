@@ -50,7 +50,7 @@ void setup() {
         carrier.display.println("OK");
     } else {
         carrier.display.println("FEHLER");
-        while (true); // Stoppe bei Fehler
+       delay(3000);
     }
 
     // MQTT verbinden + Anzeige
@@ -60,13 +60,13 @@ void setup() {
         carrier.display.println("OK");
     } else {
         carrier.display.println("FEHLER");
-        while (true); // Stoppe bei Fehler
+        delay(3000);
     }
 
     mqtt.setCallback(mqttNachricht);
 
     carrier.display.setCursor(10, 100);
-    carrier.display.println("Initialisiere...");
+    carrier.display.println("Lade...");
     delay(1000);
     carrier.display.fillScreen(ST77XX_BLACK);
 
