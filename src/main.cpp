@@ -9,7 +9,7 @@ MKRIoTCarrier carrier;
 const int feuchteSensorPin = A6;
 const int trockenSchwelle = 900; // Passe diesen Wert an deine Umgebung an
 FeuchtigkeitsAnzeige anzeige(carrier);
-MqttClientWrapper mqtt("DLProduktion", "Holzbalken8214", "192.168.1.117");
+MqttClientWrapper mqtt("DLProduktion", "Holzbalken8214", "192.168.1.117", 1883);
 
 bool relaisManuell = false;
 bool relaisZustand = false;
@@ -89,7 +89,7 @@ void loop() {
         carrier.Relay1.open();
     }
 
-    // 🔄 Immer anzeigen – auch bei manuellem Modus
+    // Immer anzeigen – auch bei manuellem Modus
     anzeige.zeichne(sensorWert, relaisZustand);
 
     // MQTT senden

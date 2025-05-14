@@ -63,7 +63,7 @@ public:
         int versuche = 0;
         while (!mqttClient.connected() && versuche < 5) {
             Serial.print("Verbinde mit MQTT...");
-            if (mqttClient.connect("ArduinoClient")) {
+            if (mqttClient.connect("Arduino_client", "mqtt_user", "Garten8235" )) {
                 Serial.println(" verbunden.");
                 mqttClient.subscribe("relais/steuerung");
                 return true;
