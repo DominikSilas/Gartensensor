@@ -9,7 +9,7 @@ MKRIoTCarrier carrier;
 const int feuchteSensorPin = A6;
 const int trockenSchwelle = 900; // Passe diesen Wert an deine Umgebung an
 FeuchtigkeitsAnzeige anzeige(carrier);
-MqttClientWrapper mqtt("DLProduktion", "Holzbalken8214", "192.168.1.117", 1883);
+MqttClientWrapper mqtt("Dominik Hotspot", "12345678", "192.168.1.117",&carrier, 1883);
 
 bool relaisManuell = false;
 bool relaisZustand = false;
@@ -54,8 +54,6 @@ void setup() {
     }
 
     // MQTT verbinden + Anzeige
-    carrier.display.setCursor(10, 70);
-    carrier.display.print("MQTT: ");
     if (mqtt.setupMQTT()) {
         carrier.display.println("OK");
     } else {

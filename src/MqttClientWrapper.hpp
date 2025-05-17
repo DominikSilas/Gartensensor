@@ -5,12 +5,14 @@
 #ifndef CODE_MQTTCLIENTWRAPPER_HPP
 #define CODE_MQTTCLIENTWRAPPER_HPP
 
+#include <Arduino_MKRIoTCarrier.h>
 #include <WiFiNINA.h>
 #include <PubSubClient.h>
 #include <functional>
 
 class MqttClientWrapper {
 private:
+    MKRIoTCarrier* carrier;
     const char* ssid;
     const char* password;
     const char* broker;
@@ -34,8 +36,8 @@ private:
     static MqttClientWrapper* instance;
 
 public:
-    MqttClientWrapper(const char* ssid, const char* password, const char* broker, int port = 1883)
-            : ssid(ssid), password(password), broker(broker), port(port), mqttClient(wifiClient) {
+    MqttClientWrapper(const char* ssid, const char* password, const char* broker, MKRIoTCarrier* carrier, int port = 1883)
+            : ssid(ssid), password(password), broker(broker), port(port), mqttClient(wifiClient), carrier(carrier) {
         instance = this;
     }
 
@@ -61,21 +63,43 @@ public:
         mqttClient.setCallback(callbackWrapper);
 
         int versuche = 0;
+
         while (!mqttClient.connected() && versuche < 5) {
             Serial.print("Verbinde mit MQTT...");
-            if (mqttClient.connect("Arduino_client", "mqtt_user", "Garten8235" )) {
+
+            if (carrier) {
+                carrier->display.fillRect(10, 90, 240, 30, ST77XX_BLACK);
+                carrier->display.setCursor(10, 90);
+                carrier->display.print("Verbinde...");
+            }
+
+            if (mqttClient.connect("Arduino_client", "mqtt_user", "Garten8235")) {
                 Serial.println(" verbunden.");
                 mqttClient.subscribe("relais/steuerung");
+
+                if (carrier) {
+                    carrier->display.fillRect(10, 90, 240, 30, ST77XX_BLACK);
+                    carrier->display.setCursor(10, 90);
+                    carrier->display.println("MQTT OK");
+                }
+
                 return true;
             } else {
                 Serial.print(" Fehler, rc=");
                 Serial.println(mqttClient.state());
+
+                if (carrier) {
+                    carrier->display.fillRect(10, 90, 240, 30, ST77XX_BLACK);
+                    carrier->display.setCursor(10, 90);
+                    carrier->display.print("Fehler: ");
+                    carrier->display.println(mqttClient.state());
+                }
+
                 delay(2000);
                 versuche++;
             }
         }
 
-        Serial.println("MQTT-Verbindung fehlgeschlagen!");
         return false;
     }
 
