@@ -16,6 +16,8 @@ private:
     const char* ssid;
     const char* password;
     const char* broker;
+    const char* mqttUser;
+    const char* mqttPassword;
     int port;
     WiFiClient wifiClient;
     PubSubClient mqttClient;
@@ -36,15 +38,16 @@ private:
     static MqttClientWrapper* instance;
 
 public:
-    MqttClientWrapper(const char* ssid, const char* password, const char* broker, MKRIoTCarrier* carrier, int port = 1883)
-            : ssid(ssid), password(password), broker(broker), port(port), mqttClient(wifiClient), carrier(carrier) {
+    MqttClientWrapper(const char* ssid, const char* password, const char* broker, const char* mqttUser, const char* mqttPassword, MKRIoTCarrier* carrier, int port = 1883)
+            : ssid(ssid), password(password), broker(broker), mqttUser(mqttUser), mqttPassword(mqttPassword),
+              port(port), mqttClient(wifiClient), carrier(carrier) {
         instance = this;
     }
 
     bool connectWiFi() {
         WiFi.begin(ssid, password);
         int versuche = 0;
-        while (WiFi.status() != WL_CONNECTED && versuche < 20) {
+        while (WiFi.status() != WL_CONNECTED && versuche < 10) {
             delay(500);
             Serial.print(".");
             versuche++;
@@ -73,7 +76,7 @@ public:
                 carrier->display.print("Verbinde...");
             }
 
-            if (mqttClient.connect("Arduino_client", "mqtt_user", "Garten8235")) {
+            if (mqttClient.connect("gartensensor", mqttUser, mqttPassword)) {
                 Serial.println(" verbunden.");
                 mqttClient.subscribe("relais/steuerung");
 

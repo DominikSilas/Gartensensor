@@ -7,15 +7,24 @@
 MKRIoTCarrier carrier;
 
 const int feuchteSensorPin = A6;
-const int trockenSchwelle = 900; // Passe diesen Wert an deine Umgebung an
+const int feuchteSchwelleOben = 950;  // Relais EIN oberhalb dieses Wertes
+const int feuchteSchwelleUnten  = 870; // Relais AUS unterhalb dieses Wertes
 FeuchtigkeitsAnzeige anzeige(carrier);
-MqttClientWrapper mqtt("Dominik Hotspot", "12345678", "192.168.1.117",&carrier, 1883);
+MqttClientWrapper mqtt(
+        "DLProduktion",              // WLAN-SSID
+        "Holzbalken8214",            // WLAN-Passwort
+        "192.168.1.117",             // MQTT-Broker-IP
+        "mqtt_user",                 // MQTT-Username
+        "Garten8235",                // MQTT-Passwort
+        &carrier,
+        1883
+);
 
 bool relaisManuell = false;
 bool relaisZustand = false;
 
 void mqttNachricht(String topic, String payload) {
-    if (topic == "relais/steuerung") {
+    if (topic == "sensor/garten") {
         if (payload == "AN") {
             relaisZustand = true;
             relaisManuell = true;
@@ -55,7 +64,7 @@ void setup() {
 
     // MQTT verbinden + Anzeige
     if (mqtt.setupMQTT()) {
-        carrier.display.println("OK");
+        carrier.display.println("");
     } else {
         carrier.display.println("FEHLER");
         delay(3000);
@@ -63,9 +72,9 @@ void setup() {
 
     mqtt.setCallback(mqttNachricht);
 
-    carrier.display.setCursor(10, 100);
+    carrier.display.setCursor(10, 120);
     carrier.display.println("Lade...");
-    delay(1000);
+    delay(2000);
     carrier.display.fillScreen(ST77XX_BLACK);
 
     anzeige.initAnzeige();
@@ -74,25 +83,29 @@ void setup() {
 
 void loop() {
     int sensorWert = analogRead(feuchteSensorPin);
+    int feuchteProzent = anzeige.berechneProzent(sensorWert);
     Serial.print("Feuchtewert: ");
     Serial.println(sensorWert);
 
     if (!relaisManuell) {
-        relaisZustand = (sensorWert >= trockenSchwelle);
+        if (!relaisZustand && sensorWert >= feuchteSchwelleOben) {
+            relaisZustand = true;
+        } else if (relaisZustand && sensorWert <= feuchteSchwelleUnten) {
+            relaisZustand = false;
+        }
     }
-
     if (relaisZustand) {
-        carrier.Relay1.close();
+        carrier.Relay2.open();
     } else {
-        carrier.Relay1.open();
+        carrier.Relay2.close();
     }
 
     // Immer anzeigen – auch bei manuellem Modus
     anzeige.zeichne(sensorWert, relaisZustand);
 
     // MQTT senden
-    String payload = String("{\"feuchte\":") + sensorWert + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
-    mqtt.publish("sensor/feuchte", payload);
+    String payload = String("{\"feuchte\":") + feuchteProzent + ",\"relais\":" + (relaisZustand ? "true" : "false") + "}";
+    mqtt.publish("sensor/garten", payload);
 
     mqtt.loop();  // nicht vergessen
     delay(1000);

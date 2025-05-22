@@ -19,6 +19,12 @@ public:
     void initAnzeige() {
 
     }
+    int berechneProzent(int rohwert) {
+        int maxWert = 1000;
+        int minWert = 800;
+        rohwert = constrain(rohwert, minWert, maxWert);
+        return map(rohwert, minWert, maxWert, 100, 0);
+    }
 
     void zeichne(int feuchtigkeit, bool relaisAn) {
         // Wertebereich begrenzen
@@ -29,7 +35,7 @@ public:
         int radius = 40;
         int tropfenhoehe = 70;
         feuchtigkeit = constrain(feuchtigkeit, minWert, maxWert);
-        long prozent = map(feuchtigkeit, minWert, maxWert, 100, 0);
+        long prozent = berechneProzent(feuchtigkeit);
         int fuellHoehe = map(prozent, 0, 100,0, tropfenhoehe + radius);
 
 
@@ -77,6 +83,9 @@ public:
             carrier.display.print("Feuchte: ");
             carrier.display.print(prozent);
             carrier.display.print("%");
+            carrier.display.setCursor(60,50);
+            carrier.display.print("Wert: ");
+            carrier.display.print(feuchtigkeit);
 
             letzteProzent = prozent;
         }
