@@ -43,6 +43,13 @@ public:
               port(port), mqttClient(wifiClient), carrier(carrier) {
         instance = this;
     }
+    bool isWiFiConnected() {
+        return WiFi.status() == WL_CONNECTED;
+    }
+
+    bool isMqttConnected() {
+        return mqttClient.connected();
+    }
 
     bool connectWiFi() {
         WiFi.begin(ssid, password);

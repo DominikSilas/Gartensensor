@@ -26,7 +26,8 @@ public:
         return map(rohwert, minWert, maxWert, 100, 0);
     }
 
-    void zeichne(int feuchtigkeit, bool relaisAn) {
+
+    void zeichne(int feuchtigkeit, bool relaisAn, bool tankVoll) {
         // Wertebereich begrenzen
         int maxWert = 1000;
         int minWert = 800;
@@ -95,6 +96,8 @@ public:
         carrier.display.setTextColor(ST77XX_WHITE, ST77XX_BLACK);
         carrier.display.setCursor(60, 200);
         carrier.display.print(relaisAn ? "Wasser EIN " : "Wasser AUS ");
+        carrier.display.setCursor(60, 180);
+        carrier.display.print(tankVoll ? "Tank VOLL " : "Tank LEER");
     }
 
 
