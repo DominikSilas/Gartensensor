@@ -37,12 +37,15 @@ private:
 
     static MqttClientWrapper* instance;
 
+    unsigned long lastReconnectAttempt = 0;
+
 public:
     MqttClientWrapper(const char* ssid, const char* password, const char* broker, const char* mqttUser, const char* mqttPassword, MKRIoTCarrier* carrier, int port = 1883)
             : ssid(ssid), password(password), broker(broker), mqttUser(mqttUser), mqttPassword(mqttPassword),
               port(port), mqttClient(wifiClient), carrier(carrier) {
         instance = this;
     }
+
     bool isWiFiConnected() {
         return WiFi.status() == WL_CONNECTED;
     }
@@ -74,7 +77,7 @@ public:
 
         int versuche = 0;
 
-        while (!mqttClient.connected() && versuche < 5) {
+        while (!mqttClient.connected() && versuche < 2) {
             Serial.print("Verbinde mit MQTT...");
 
             if (carrier) {
@@ -100,7 +103,7 @@ public:
 
                 if (carrier) {
                     carrier->display.fillRect(10, 90, 240, 30, ST77XX_BLACK);
-                    carrier->display.setCursor(10, 90);
+                    carrier->display.setCursor(10, 120);
                     carrier->display.print("Fehler: ");
                     carrier->display.println(mqttClient.state());
                 }
@@ -122,10 +125,20 @@ public:
     }
 
     void loop() {
-        mqttClient.loop();
+        if (!isWiFiConnected() || !isMqttConnected()) {
+            unsigned long now = millis();
+            if (now - lastReconnectAttempt > 300000) { // alle 5 Minuten
+                lastReconnectAttempt = now;
+                Serial.println("Versuche WLAN und MQTT neu zu verbinden...");
+                if (connectWiFi()) {
+                    setupMQTT();
+                }
+            }
+        } else {
+            mqttClient.loop();
+        }
     }
 };
-
 
 
 #endif //CODE_MQTTCLIENTWRAPPER_HPP

@@ -84,7 +84,7 @@ public:
             carrier.display.print("Feuchte: ");
             carrier.display.print(prozent);
             carrier.display.print("%");
-            carrier.display.setCursor(60,50);
+            carrier.display.setCursor(60,30);
             carrier.display.print("Wert: ");
             carrier.display.print(feuchtigkeit);
 

@@ -8,28 +8,28 @@
 MKRIoTCarrier carrier;
 
 const int feuchteSensorPin = A6;
-int fuellstandPin = A5;
+const int fuellstandPin = 6;  // digitaler Eingang
 
 FlashStorage(schwelleOben, int);
 FlashStorage(schwelleUnten, int);
 
-int feuchteSchwelleOben = 950;  // Relais EIN oberhalb dieses Wertes
-int feuchteSchwelleUnten  = 870; // Relais AUS unterhalb dieses Wertes
+int feuchteSchwelleOben = 950;
+int feuchteSchwelleUnten = 870;
 
 FeuchtigkeitsAnzeige anzeige(carrier);
 MqttClientWrapper mqtt(
-        "DLProduktion",              // WLAN-SSID
-        "Holzbalken8214",            // WLAN-Passwort
-        "192.168.1.117",             // MQTT-Broker-IP
-        "mqtt_user",                 // MQTT-Username
-        "Garten8235",                // MQTT-Passwort
+        "DLProduktion",
+        "Holzbalken8214",
+        "192.168.1.117",
+        "mqtt_user",
+        "Garten8235",
         &carrier,
         1883
 );
 
 bool relaisManuell = false;
 bool relaisZustand = false;
-bool schwellenwertMenue = false;
+
 
 void mqttNachricht(String topic, String payload) {
     if (topic == "sensor/garten") {
@@ -44,27 +44,11 @@ void mqttNachricht(String topic, String payload) {
         }
     }
 }
-void zeigeSchwellenwerte() {
-    carrier.display.fillScreen(ST77XX_BLACK);
-    carrier.display.setTextSize(3);
-    carrier.display.setTextColor(ST77XX_GREEN);
-    carrier.display.setCursor(10, 40);
-    carrier.display.print("Oben: ");
-    carrier.display.println(feuchteSchwelleOben);
-    carrier.display.print("Unten: ");
-    carrier.display.println(feuchteSchwelleUnten);
 
-    carrier.display.setCursor(10, 120);
-    carrier.display.setTextSize(2);
-    carrier.display.setTextColor(ST77XX_WHITE);
-    carrier.display.println("T0:+O T1:-O T4:+U T3:-U");
-    carrier.display.println("T2: Zurueck");
-}
 void ladeSchwellenAusFlash() {
     feuchteSchwelleOben = schwelleOben.read();
     feuchteSchwelleUnten = schwelleUnten.read();
 
-    // Wenn leer oder ungültig, Standardwerte setzen
     if (feuchteSchwelleOben < 500 || feuchteSchwelleOben > 1023) feuchteSchwelleOben = 950;
     if (feuchteSchwelleUnten < 500 || feuchteSchwelleUnten > feuchteSchwelleOben - 10) feuchteSchwelleUnten = 870;
 }
@@ -83,12 +67,14 @@ void setup() {
     ladeSchwellenAusFlash();
     carrier.display.begin();
 
-    carrier.display.setRotation(0);         // Teste andere Werte bei Bedarf
+    carrier.display.setRotation(0);
     carrier.display.fillScreen(ST77XX_BLACK);
     carrier.display.setTextSize(3);
-    carrier.display.setTextColor(ST77XX_RED); // Knallige Farbe
-    carrier.display.setCursor(0, 90);         // Sichere Position
+    carrier.display.setTextColor(ST77XX_RED);
+    carrier.display.setCursor(0, 90);
     carrier.display.println("System Start");
+
+    pinMode(fuellstandPin, INPUT);
 
     delay(2000);
     carrier.display.fillScreen(ST77XX_BLACK);
@@ -98,10 +84,9 @@ void setup() {
         carrier.display.println("OK");
     } else {
         carrier.display.println("FEHLER");
-       delay(3000);
+        delay(3000);
     }
 
-    // MQTT verbinden + Anzeige
     if (mqtt.setupMQTT()) {
         carrier.display.println("");
     } else {
@@ -111,78 +96,54 @@ void setup() {
 
     mqtt.setCallback(mqttNachricht);
 
-    carrier.display.setCursor(10, 120);
+    carrier.display.setCursor(10, 140);
     carrier.display.println("Lade...");
     delay(2000);
     carrier.display.fillScreen(ST77XX_BLACK);
 
     anzeige.initAnzeige();
-    carrier.Relay1.open(); // Startzustand
+    carrier.Relay1.close(); // Startzustand
 }
+void zeigeSchwellenAufDisplay(int sensorWert, bool relais, bool tankVoll) {
+    carrier.display.fillScreen(ST77XX_BLACK);
+    anzeige.zeichne(sensorWert, relais, tankVoll);
 
+    carrier.display.setTextSize(2);
+    carrier.display.setTextColor(ST77XX_WHITE);
+    carrier.display.setCursor(120, 50);
+    carrier.display.print("O: ");
+    carrier.display.print(feuchteSchwelleOben);
+    carrier.display.setCursor(10, 50);
+    carrier.display.print("U: ");
+    carrier.display.print(feuchteSchwelleUnten);
+}
 void loop() {
     carrier.Buttons.update();
+
     float temperatur = carrier.Env.readTemperature();
     float luftfeuchte = carrier.Env.readHumidity();
-    // Menü-Toggle mit Taste T2
-    if (carrier.Buttons.onTouchDown(TOUCH2)) {
-        schwellenwertMenue = !schwellenwertMenue;
-        carrier.display.fillScreen(ST77XX_BLACK);
-        if (!schwellenwertMenue) {
-            speichereSchwellenInFlash();
-            carrier.display.fillScreen(ST77XX_BLACK);
-            // Werte vom Sensor lesen (oder gespeicherte Werte verwenden)
-            int sensorWert = analogRead(feuchteSensorPin);
-            int fuellstandWert = analogRead(fuellstandPin);
-            bool fuellstandOK = fuellstandWert > 500;  // Schwelle anpassen je nach Realität
-            anzeige.zeichne(sensorWert, relaisZustand, fuellstandOK);
-            carrier.display.setCursor(10, 200);
-            carrier.display.setTextSize(2);
-            carrier.display.setTextColor(ST77XX_YELLOW);
-            carrier.display.print("Tank ADC: ");
-            carrier.display.println(fuellstandWert);
-        }
-        delay(500);
-    }
-
-    if (schwellenwertMenue) {
-        bool geaendert = false;
-
-        if (carrier.Buttons.onTouchDown(TOUCH0)) { // Oben ++
-            feuchteSchwelleOben += 5;
-            geaendert = true;
-        }
-        if (carrier.Buttons.onTouchDown(TOUCH1)) { // Oben --
-            feuchteSchwelleOben -= 5;
-            geaendert = true;
-        }
-        if (carrier.Buttons.onTouchDown(TOUCH4)) { // Unten ++
-            feuchteSchwelleUnten += 5;
-            geaendert = true;
-        }
-        if (carrier.Buttons.onTouchDown(TOUCH3)) { // Unten --
-            feuchteSchwelleUnten -= 5;
-            geaendert = true;
-        }
-
-        if (feuchteSchwelleOben <= feuchteSchwelleUnten + 10) {
-            feuchteSchwelleOben = feuchteSchwelleUnten + 10;
-        }
-
-        if (geaendert) {
-            zeigeSchwellenwerte();
-            delay(300);
-        }
-
-        return; // Menü aktiv, nichts anderes ausführen
-    }
-
-
     int sensorWert = analogRead(feuchteSensorPin);
     int feuchteProzent = anzeige.berechneProzent(sensorWert);
     bool fuellstandOK = (digitalRead(fuellstandPin) == HIGH);
-    Serial.print("Feuchtewert: ");
-    Serial.println(sensorWert);
+
+    bool geaendert = false;
+
+    if (carrier.Buttons.onTouchDown(TOUCH0)) { feuchteSchwelleOben += 5; geaendert = true; }
+    if (carrier.Buttons.onTouchDown(TOUCH1)) { feuchteSchwelleOben -= 5; geaendert = true; }
+    if (carrier.Buttons.onTouchDown(TOUCH4)) { feuchteSchwelleUnten += 5; geaendert = true; }
+    if (carrier.Buttons.onTouchDown(TOUCH3)) { feuchteSchwelleUnten -= 5; geaendert = true; }
+
+    if (feuchteSchwelleOben <= feuchteSchwelleUnten + 10) {
+        feuchteSchwelleOben = feuchteSchwelleUnten + 10;
+        geaendert = true;
+    }
+
+    if (geaendert) {
+        speichereSchwellenInFlash();
+        zeigeSchwellenAufDisplay(sensorWert, relaisZustand, fuellstandOK);
+        delay(300);
+        return;
+    }
 
     if (fuellstandOK && !relaisManuell) {
         if (!relaisZustand && sensorWert >= feuchteSchwelleOben) {
@@ -192,38 +153,25 @@ void loop() {
         }
     }
 
-// Sicherheitsabschaltung bei leerem Tank
     if (!fuellstandOK) {
         relaisZustand = false;
     }
 
-// Relais schalten
     if (relaisZustand) {
         carrier.Relay2.open();
     } else {
         carrier.Relay2.close();
     }
 
-// Immer anzeigen
     anzeige.zeichne(sensorWert, relaisZustand, fuellstandOK);
 
-// Visualisierung der Touch-Tasten mit LEDs
-    carrier.leds.setPixelColor(0, carrier.Buttons.getTouch(TOUCH0) ? carrier.leds.Color(255, 0, 0) : 0);
-    carrier.leds.setPixelColor(1, carrier.Buttons.getTouch(TOUCH1) ? carrier.leds.Color(0, 255, 0) : 0);
-    carrier.leds.setPixelColor(2, carrier.Buttons.getTouch(TOUCH2) ? carrier.leds.Color(0, 0, 255) : 0);
-    carrier.leds.setPixelColor(3, carrier.Buttons.getTouch(TOUCH3) ? carrier.leds.Color(255, 255, 0) : 0);
-    carrier.leds.setPixelColor(4, carrier.Buttons.getTouch(TOUCH4) ? carrier.leds.Color(255, 0, 255) : 0);
-    carrier.leds.show();
-
-    // MQTT senden
     String payload = String("{\"feuchte\":") + feuchteProzent +
-            ",\"relais\":" + (relaisZustand ? "true" : "false") +
-            ",\"temperatur\":" + temperatur +
-            ",\"luftfeuchte\":" + luftfeuchte +
-            ",\"tankVoll\":" + (fuellstandOK ? "true" : "false")+ "}";
+                     ",\"relais\":" + (relaisZustand ? "true" : "false") +
+                     ",\"temperatur\":" + temperatur +
+                     ",\"luftfeuchte\":" + luftfeuchte +
+                     ",\"tankVoll\":" + (fuellstandOK ? "true" : "false") + "}";
 
     mqtt.publish("sensor/garten", payload);
-
-    mqtt.loop();  // nicht vergessen
+    mqtt.loop();
     delay(1000);
 }
